@@ -44,19 +44,7 @@ git clone https://github.com/facebookresearch/detectron2.git
 ### 2. Using the FINROC(ROS) module : 
 To utilize the panoptic segmentation module within the FINROC module, Install FINROC Environment. Ensure that you have FINROC installed and set up. Please refer to the official FINROC documentation git clone https://github.com/finroc/finroc_conventional.git
 
-
-## Data Preparation
-
-Explain the process of data preparation using the scripts in the `panoptic_seg_data_preparations` folder. Include details on the COCO-panoptic segmentation format and how to adapt the scripts for custom datasets.
-
-## Model Training
-
-If applicable, provide details on how to use the scripts in the `train` folder for training the panoptic segmentation model. Include any custom hooks or configurations that might be necessary.
-
-## ROS Integration (FINROC)
-
-Explain the integration of the panoptic segmentation module into the Robot Operating System (ROS) using the scripts in the `FINROC` folder. Include information on subscribing to image data, publishing segmentation output, and utilizing the data extraction module.
-
+The Panoptic segmentation FINROC module has an interface to onnc 
 ## Acknowledgments
 
 Mention any third-party libraries, tools, or resources that were used in the project.
