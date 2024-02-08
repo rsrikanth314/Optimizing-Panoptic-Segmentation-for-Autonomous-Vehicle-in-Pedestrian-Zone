@@ -48,11 +48,6 @@ To utilize the panoptic segmentation module within the FINROC module, Install FI
 
 The Panoptic Segmentation FINROC module has an interface to the ONNX runtime, which loads the model. The panoptic segmentation module subscribes to a topic that publishes input images and subsequently publishes the panoptic segmentation output
 
-## Acknowledgments
-
-Mention any third-party libraries, tools, or resources that were used in the project.
-
-## License
 
 This project is licensed under the [LICENSE NAME] - see the [LICENSE.md](LICENSE.md) file for details.
 
