@@ -46,8 +46,8 @@ To utilize the panoptic segmentation module within the FINROC module, Install FI
 
 ![FINROC Module Overview](documents/Flow_chart_finroc_onnx_infernce.PNG)
 
+The Panoptic Segmentation FINROC module has an interface to the ONNX runtime, which loads the model. The panoptic segmentation module subscribes to a topic that publishes input images and subsequently publishes the panoptic segmentation output
 
-The Panoptic segmentation FINROC module has an interface to onnc 
 ## Acknowledgments
 
 Mention any third-party libraries, tools, or resources that were used in the project.
