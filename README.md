@@ -44,7 +44,7 @@ git clone https://github.com/facebookresearch/detectron2.git
 ### 2. Using the FINROC(ROS) module : 
 To utilize the panoptic segmentation module within the FINROC module, Install FINROC Environment. Ensure that you have FINROC installed and set up. Please refer to the official FINROC documentation git clone https://github.com/finroc/finroc_conventional.git
 
-![FINROC Module Overview](documents/Flow_chart_finroc_onnx_infernce.png)
+![FINROC Module Overview](documents/Flow_chart_finroc_onnx_infernce.PNG)
 
 
 The Panoptic segmentation FINROC module has an interface to onnc 
