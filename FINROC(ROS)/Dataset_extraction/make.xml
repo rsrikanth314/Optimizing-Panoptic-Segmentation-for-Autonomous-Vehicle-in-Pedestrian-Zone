@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+  <targets>
+    <library>
+      <sources exclude="pSaveFile.cpp">
+        *.cpp
+      </sources>
+    </library>
+    <program name="finroc_Dataset_extraction">
+      <sources>
+        pSaveFile.cpp
+      </sources>
+    </program>
+  </targets>

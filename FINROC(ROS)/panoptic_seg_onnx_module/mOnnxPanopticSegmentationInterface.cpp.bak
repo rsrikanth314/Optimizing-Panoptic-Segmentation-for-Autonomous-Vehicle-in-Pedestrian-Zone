@@ -1,0 +1,260 @@
+//
+// You received this file as part of Finroc
+// A framework for intelligent robot control
+//
+// Copyright (C) AG Robotersysteme TU Kaiserslautern
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+//----------------------------------------------------------------------
+/*!\file    libraries/machine_learning_appliance/onnx/mOnnxPanopticSegmentationInterface.cpp
+ *
+ * \author  Srikanth Reddy Yalamakuru
+ *
+ * \date    2023-11-23
+ *
+ */
+//----------------------------------------------------------------------
+#include "libraries/machine_learning_appliance/onnx/mOnnxPanopticSegmentationInterface.h"
+
+//----------------------------------------------------------------------
+// External includes (system with <>, local with "")
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Internal includes with ""
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Debugging
+//----------------------------------------------------------------------
+#include <cassert>
+
+//----------------------------------------------------------------------
+// Namespace usage
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Namespace declaration
+//----------------------------------------------------------------------
+namespace finroc
+{
+namespace machine_learning_appliance
+{
+namespace onnx
+{
+
+//----------------------------------------------------------------------
+// Forward declarations / typedefs / enums
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// Const values
+//----------------------------------------------------------------------
+#ifdef _LIB_FINROC_PLUGINS_RUNTIME_CONSTRUCTION_ACTIONS_PRESENT_
+static const runtime_construction::tStandardCreateModuleAction<mOnnxPanopticSegmentationInterface> cCREATE_ACTION_FOR_M_ONNXPANOPTICSEGMENTATIONINTERFACE("OnnxPanopticSegmentationInterface");
+#endif
+
+//----------------------------------------------------------------------
+// Implementation
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// mOnnxPanopticSegmentationInterface constructor
+//----------------------------------------------------------------------
+mOnnxPanopticSegmentationInterface::mOnnxPanopticSegmentationInterface(core::tFrameworkElement *parent, const std::string &name) :
+  mOnnxInterface(parent, name) // change to 'true' to make module's ports shared (so that ports in other processes can connect to its output and/or input ports)
+{
+  std::cout<<" Setting Up mOnnxPanopticSegmentationInterface is done !"<<std::endl;
+}
+
+//----------------------------------------------------------------------
+// mOnnxPanopticSegmentationInterface destructor
+//----------------------------------------------------------------------
+mOnnxPanopticSegmentationInterface::~mOnnxPanopticSegmentationInterface()
+{}
+
+//----------------------------------------------------------------------
+// mOnnxPanopticSegmentationInterface OnStaticParameterChange
+//----------------------------------------------------------------------
+void mOnnxPanopticSegmentationInterface::OnStaticParameterChange()
+{
+}
+
+//----------------------------------------------------------------------
+// mOnnxPanopticSegmentationInterface OnParameterChange
+//----------------------------------------------------------------------
+void mOnnxPanopticSegmentationInterface::OnParameterChange()
+{
+}
+
+//----------------------------------------------------------------------
+// mOnnxPanopticSegmentationInterface Update
+//----------------------------------------------------------------------
+void mOnnxPanopticSegmentationInterface::Update()
+{
+  if (in_image.HasChanged())
+  { 
+
+    auto img_ptr = this->in_image.GetPointer();
+    cv::Mat frame = rrlib::coviroa::AccessImageAsMat(*img_ptr);
+     
+
+    auto out_segmentation_buffer = out_segmentation_result.GetUnusedBuffer();
+    out_segmentation_buffer->Resize(frame.cols, frame.rows, rrlib::coviroa::tImageFormat::eIMAGE_FORMAT_RGB24);
+    cv::Mat out = rrlib::coviroa::AccessImageAsMat(*out_segmentation_buffer);
+
+    if (frame.empty() || (frame.cols <= 1) || (frame.rows <= 1))
+    {
+      std::cout << "Failed to read input image" << std::endl;
+    }
+    else
+    {
+      std::cout<<"image read correctly with size; width: "<<frame.cols<<", height: "<<frame.rows<<", channels: "<<frame.channels()<<std::endl;
+
+      std::vector<float> dst(this->par_image_channels.Get() * this->par_image_height.Get() * this->par_image_width.Get());
+
+      auto masked_image = processOneFrame(frame, dst.data());
+      
+    }
+  }
+}
+
+
+//----------------------------------------------------------------------
+// mOnnxSegmentationInterface preprocess
+//----------------------------------------------------------------------
+void mOnnxPanopticSegmentationInterface::preprocess(float* dst,                     //
+    const float* src,                //
+    const int64_t targetImgWidth,   //
+    const int64_t targetImgHeight,  //
+    const int numChannels) const
+{
+
+  std::cout<<"Starting preprocess with width: "<<targetImgWidth<<", height: "<<targetImgHeight<< ", channels: "<< numChannels;
+  for (int c = 0; c < numChannels; ++c)
+  {
+    for (int i = 0; i < targetImgHeight; ++i)
+    {
+      for (int j = 0; j < targetImgWidth; ++j)
+      {
+        dst[c * targetImgHeight * targetImgWidth + i * targetImgWidth + j] =
+          src[i * targetImgWidth * numChannels + j * numChannels + c];
+      }
+    }
+  }
+  std::cout<<" Pre-processing Done"<<std::endl;
+}
+
+//----------------------------------------------------------------------
+// mOnnxSegmentationInterface preprocess
+//----------------------------------------------------------------------
+void mOnnxPanopticSegmentationInterface::preprocess(float* dst,                     //
+    const cv::Mat& imgSrc,          //
+    const int64_t targetImgWidth,   //
+    const int64_t targetImgHeight,  //
+    const int numChannels) const
+{
+  for (int i = 0; i < targetImgHeight; ++i)
+  {
+    for (int j = 0; j < targetImgWidth; ++j)
+    {
+      for (int c = 0; c < numChannels; ++c)
+      {
+        dst[c * targetImgHeight * targetImgWidth + i * targetImgWidth + j] = imgSrc.ptr<float>(i, j)[c];
+      }
+    }
+  }
+  std::cout<<" Pre-processing Done"<<std::endl;
+}
+
+
+cv::Mat mOnnxPanopticSegmentationInterface::processOneFrame(const cv::Mat& inputImg, float* dst)
+{
+  
+  cv::Mat inputImg_;
+  
+  if (inputImg.channels() == 1)
+  {
+    std::vector<cv::Mat> vChannels;
+    for (unsigned int c = 0; c < 3; c++)
+    {
+      vChannels.push_back(inputImg);
+    }
+    cv::merge(vChannels, inputImg_);
+  }
+  else
+    inputImg.copyTo(inputImg_);
+
+  cv::Mat processedImg;
+  // cv::cvtColor(inputImg_, processedImg, cv::COLOR_BGR2RGB);
+  // cv::resize(processedImg, processedImg, cv::Size(this->par_image_width.Get(), this->par_image_height.Get()));
+  cv::resize(inputImg_, processedImg, cv::Size(this->par_image_width.Get(), this->par_image_height.Get()));
+  processedImg.convertTo(processedImg, CV_32FC3);
+  // cv::cvtColor(inputImg, processedImg, cv::COLOR_BGR2BGRA);
+
+  std::cout<<"inputImg size; width: "<<inputImg_.cols<<", height: "<<inputImg_.rows<<", channels: "<<inputImg_.channels()<<std::endl;
+  std::cout<<"processedImg size; width: "<<processedImg.cols<<", height: "<<processedImg.rows<<", channels: "<<processedImg.channels()<<std::endl;
+
+  preprocess(dst, processedImg, this->par_image_width.Get(), this->par_image_height.Get(), this->par_image_channels.Get());
+
+  cv::Mat dummy_query = cv::Mat(this->par_image_height.Get(), this->par_image_width.Get(), CV_32F, dst);
+
+  std::cout<<"Starting infernce"<< std::endl;
+
+  std::vector<std::pair<float*, std::vector<int64_t>>> inferenceOutput = this->session_handler({dst});
+
+  std::cout<<"Infernecing Done !!"<<std::endl;
+  std::cout<<"Infernce output vector length: "<<inferenceOutput.size()<<std::endl;
+
+  if (!inferenceOutput.empty()) 
+  {
+    // Access the first element of inferenceOutput
+    float* floatPtr = inferenceOutput.front().first;
+    std::vector<int64_t> intVector = inferenceOutput.front().second;
+
+    // Print information about the first pair
+    std::cout << "floatPtr: " << floatPtr << std::endl;
+    std::cout << "intVector size: " << intVector.size() << std::endl;
+
+    // Print the data pointed to by floatPtr
+    std::cout << "floatPtr data: ";
+    for (size_t i = 0; floatPtr[i] != '\0'; ++i) {
+        std::cout << floatPtr[i] << " ";
+    }
+    std::cout << std::endl;
+
+    // Print the contents of intVector
+    std::cout << "intVector elements: ";
+    for (const auto& element : intVector) {
+        std::cout << element << " ";
+    }
+    std::cout << std::endl;
+    
+  } else 
+  {
+    std::cout << "inferenceOutput is empty." << std::endl;
+  }
+    
+  cv::Mat processedMask;
+
+  return processedMask;
+}
+//----------------------------------------------------------------------
+// End of namespace declaration
+//----------------------------------------------------------------------
+}
+}
+}
